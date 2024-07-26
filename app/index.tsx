@@ -1,3 +1,4 @@
+import "react-native-gesture-handler";
 import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
@@ -5,31 +6,18 @@ import {
   FlatList,
   ActivityIndicator,
   SafeAreaView,
+  TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
 import axios from "axios";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import CharacterCard from "@/components/CharacterCard";
 import FilterCharacter from "@/components/FilterCharacter";
-import { TouchableWithoutFeedback } from "react-native-gesture-handler";
-import "react-native-gesture-handler";
-
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-
-interface Character {
-  name: string;
-  status: string;
-  id: number;
-  image: string;
-  location: {
-    name: string;
-  };
-  origin: {
-    name: string;
-  };
-}
+import { Character } from "@/types/Character";
 
 const App = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [allCharacters, setAllCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<{ status: string; location: string; origin: string }>({
     status: "",
@@ -37,35 +25,46 @@ const App = () => {
     origin: "",
   });
 
-  useEffect(() => {
+  const fetchCharacters = () => {
+    setLoading(true);
     axios
       .get("https://rickandmortyapi.com/api/character")
       .then((response) => {
         setCharacters(response.data.results);
+        setAllCharacters(response.data.results); // Store all characters
         setLoading(false);
       })
       .catch((error) => {
         console.error(error);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchCharacters();
   }, []);
 
   const applyFilters = (status: string, location: string, origin: string) => {
     setFilters({ status, location, origin });
-    axios
-      .get("https://rickandmortyapi.com/api/character", {
-        params: {
-          status: status || undefined,
-          location: location || undefined,
-          origin: origin || undefined,
-        },
-      })
-      .then((response) => {
-        setCharacters(response.data.results);
-      })
-      .catch((error) => {
-        console.error(error);
+
+    if (!status && !location && !origin) {
+      setCharacters(allCharacters);
+    } else {
+      const filteredCharacters = allCharacters.filter((character) => {
+        const matchesStatus = status
+          ? character.status.toLowerCase().includes(status.toLowerCase())
+          : true;
+        const matchesLocation = location
+          ? character.location.name.toLowerCase().includes(location.toLowerCase())
+          : true;
+        const matchesOrigin = origin
+          ? character.origin.name.toLowerCase().includes(origin.toLowerCase())
+          : true;
+        return matchesStatus && matchesLocation && matchesOrigin;
       });
+
+      setCharacters(filteredCharacters);
+    }
   };
 
   if (loading) {
@@ -80,12 +79,14 @@ const App = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-          <FilterCharacter onApplyFilters={applyFilters} filters={filters} />
-          <FlatList
-            data={characters}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <CharacterCard item={item} />}
-          />
+          <View>
+            <FilterCharacter onApplyFilters={applyFilters} filters={filters} />
+            <FlatList
+              data={characters}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => <CharacterCard item={item} />}
+            />
+          </View>
         </TouchableWithoutFeedback>
       </SafeAreaView>
     </GestureHandlerRootView>

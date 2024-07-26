@@ -1,18 +1,6 @@
 import React from "react";
 import { View, Text, Image, StyleSheet, Dimensions } from "react-native";
-
-interface Character {
-  name: string;
-  status: string;
-  image: string;
-  id: number;
-  location: {
-    name: string;
-  };
-  origin: {
-    name: string;
-  };
-}
+import { Character } from "@/types/Character";
 
 interface CharacterCardProps {
   item: Character;
